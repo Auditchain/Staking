@@ -168,12 +168,6 @@ contract Staking is Ownable {
         emit LogStaked(msg.sender, amount);
     }
 
-    function returnBlockTimeStamp() public view returns (uint256) {
-
-        return block.timestamp;
-    }
-    
-
     /**
      * @dev Function to receive and process deposits called from stake() function
      * @param amount number of tokens deposited
