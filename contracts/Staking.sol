@@ -83,7 +83,7 @@ contract Staking is Ownable {
      * @param blacklisted - array of addresses to enter    
      */
     function blacklistAddresses(address blacklisted) public onlyOwner() {
-
+        require(blacklisted != address(0), "Staking:blacklistAddresses - Blacklisted address can't be 0");
         TokenHolder storage tokenHolder = tokenHolders[blacklisted];
         tokenHolder.blacklisted = true;
     }
