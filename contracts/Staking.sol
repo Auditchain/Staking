@@ -163,7 +163,6 @@ contract Staking is Ownable {
         require(tokenHolder.tokensStaked == 0, "This address is staking already");
 
         stakedAmount = stakedAmount.add(amount);  // track tokens contributed so far
-
         _receiveDeposit(amount);
         emit LogStaked(msg.sender, amount);
     }
@@ -190,7 +189,6 @@ contract Staking is Ownable {
 
         TokenHolder storage tokenHolder = tokenHolders[msg.sender];
         require(!tokenHolder.released, "Staking:redeem - You have already claimed your stake");
-
 
         tokenHolder.released = true;
         uint256 amountRedeemed = tokenHolder.tokensStaked;
