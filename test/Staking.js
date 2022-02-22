@@ -33,7 +33,6 @@ contract("Staking Token", (accounts) => {
 
     let tokensToDeposit = new BigNumber(1000).mult(1e18);
     let doubleTokensToDeposit = new BigNumber(2000).mult(1e18);
-    let totalReward = new BigNumber(2000).mult(1e18);
     let token;
     let depositContract;
     let staking;
@@ -111,14 +110,9 @@ contract("Staking Token", (accounts) => {
 
         it("It should fail contribution of AUDT tokens from holder1 for staking due to deposit period expired", async () => {
 
-            let blockNumber = await web3.eth.getBlockNumber();
-            let blockTime = await web3.eth.getBlock(blockNumber);
-            let endDate = blockTime.timestamp;
-            staking = await STAKING.new(token.address, endDate - 1);
+            await timeMachine.advanceTime(60 * 60 * 24);  // a month
             await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
-
             try {
-
                 await staking.stake(tokensToDeposit, { from: holder1 });
                 expectRevert();
             } catch (error) {
@@ -132,9 +126,7 @@ contract("Staking Token", (accounts) => {
         it("It should fail transferring less than 1000 AUDT tokens", async () => {
 
             await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
-
             try {
-
                 await staking.stake(new BigNumber(999).mult(1e18), { from: holder1 });
                 expectRevert();
 
@@ -198,13 +190,15 @@ contract("Staking Token", (accounts) => {
 
             await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
             await staking.stake(tokensToDeposit, { from: holder1 });
-            await timeMachine.advanceTime(60 * 60 * 24);  // a month
+            await timeMachine.advanceTimeAndBlock(60 * 60 * 24 * 366);  // year
             await staking.setDepositContract(memberHelpers.address);
             await memberHelpers.grantRole(CONTROLLER_ROLE, staking.address, { from: owner });
             await staking.redeem({ from: holder1 });
 
             let balanceAfterStaking = await token.balanceOf(memberHelpers.address);
-            let depositValue = await memberHelpers.returnDepositAmount(holder1)
+            let depositValue = await memberHelpers.returnDepositAmount(holder1);
+
+            let earningsPerUser = await staking.earningPerTokenPerDay();
             assert.strictEqual(balanceAfterStaking.toString(), depositValue.toString());
 
         })
@@ -288,6 +282,41 @@ contract("Staking Token", (accounts) => {
             } catch (error) {
                 ensureException(error);
             }
+        })
+
+
+    })
+
+    describe("Update min stake amount", async () => {
+
+        it("It should update min stake amount by owner", async () => {
+
+            await staking.updateMinStakeAmount(1, { from: owner });
+            let minAmount = await staking.minAmount();
+            assert.strictEqual(minAmount.toNumber(), 1);
+
+        })
+
+        it("It should fail update min stake amount by owner", async () => {
+
+            try {
+                await staking.updateMinStakeAmount(0, { from: owner });
+                expectRevert();
+            } catch (error) {
+                ensureException(error);
+            }
+
+        })
+
+        it("It should fail update min stake amount by random user", async () => {
+
+            try {
+                await staking.updateMinStakeAmount(10000, { from: holder1 });
+                expectRevert();
+            } catch (error) {
+                ensureException(error);
+            }
+
         })
 
 
