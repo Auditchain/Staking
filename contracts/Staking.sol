@@ -23,33 +23,31 @@ contract Staking is Ownable {
     using SafeERC20 for IERC20;
 
         struct TokenHolder {     
-        uint256 tokensStaked;      // amount of tokens  sent        
-        bool revoked;              // true if right to continue vesting is revoked
-        uint256 dateStaked;
-        bool blacklisted;
-        bool released;
-        bool cancelled;
+        uint256 tokensStaked;       // amount of tokens  sent        
+        bool revoked;               // true if right to continue vesting is revoked
+        uint256 dateStaked;         // date stake was set
+        bool blacklisted;           // true if blacklisted
+        bool released;              // true if stake released
+        bool cancelled;             // true if canclled before the term was over
     }
-
-    // mapping(address => bool) public blacklistedAddress; //store addresses not eligible for staking
 
     mapping(address => TokenHolder) public tokenHolders; //tokenHolder list
 
 
-    uint256 public totalReleased;                       //track total number of redeemed deposits
-    uint256 public totalCancelled;                      //track total number of cancelled deposits
-    uint256 public stakedAmount;                        //total number of staked tokens    
-    AuditToken private _auditToken;                     //AUDT token 
-    uint256 public stakingDateEnd;                      //Staking date end
-    address public depositContract;                     //contract where tokens will be transferred after staking
+    uint256 public totalReleased;   //track total number of redeemed deposits
+    uint256 public totalCancelled;  //track total number of cancelled deposits
+    uint256 public stakedAmount;    //total number of staked tokens    
+    AuditToken private _auditToken; //AUDT token 
+    uint256 public stakingDateEnd;  //Staking date end
+    address public depositContract; //contract where tokens will be transferred after staking
 
-    uint256 multiplier = 1e18;
-    uint256 stakingRewards = 500;  // added 2 zeros to accomplish fractional interstes like e.g. 5.55 would be represented as 555
-    uint256 yearLength = 366;
-    uint256 minAmount = 1000e18;
+    uint256 multiplier = 1e18;      // number to calculate accured gains with precisiono of 18 decimal points                
+    
+    uint256 public stakingRewards  = 500;   // added 2 zeros to accomplish fractional interstes like e.g. 5.55 would be represented as 555
+    uint256 public minAmount  = 1000e18;    // minum amount which can be staked
 
     
-    ///@dev Emitted when when staking token is issued
+    ///@dev Emitted when staking token is issued
     event LogStaked(address indexed to, uint256 amount);
 
     ///@dev Emitted when reward has been delivered
@@ -69,11 +67,14 @@ contract Staking is Ownable {
 
     /**
      * @dev Sets the below variables 
-     * @param _auditTokenAddress - address of the AUDT token
+     * @param auditTokenAddress - address of the AUDT token
+     * @param dateEnd - date end of staking
      */
-    constructor(address _auditTokenAddress, uint256 dateEnd)  {
-        require(_auditTokenAddress != address(0), "Staking:constructor - Audit token address can't be 0");
-        _auditToken = AuditToken(_auditTokenAddress);
+    constructor(address auditTokenAddress, uint256 dateEnd)  {
+        require(auditTokenAddress != address(0), "Staking:constructor - Audit token address can't be 0");
+        require(dateEnd > block.timestamp, "Staking:constructor - Date end can't be less than current time.");
+
+        _auditToken = AuditToken(auditTokenAddress);
         stakingDateEnd = dateEnd;
     }
 
@@ -110,16 +111,18 @@ contract Staking is Ownable {
      */
     function returnEarningsPerUser(address user) public view returns(uint256) {
 
+        require(user != address(0), "Staking:returnEarningsPerUser - User address can't be 0");
+
         TokenHolder storage tokenHolder = tokenHolders[user];
-
         uint256 daysNumber = (block.timestamp.sub(tokenHolder.dateStaked)).div(60 * 60 * 24);
-
-        return tokenHolder.tokensStaked.mul(daysNumber).mul(earningPertokenPerDay());
+        return (tokenHolder.tokensStaked.mul(daysNumber).mul(earningPerTokenPerDay())).div(multiplier);
     }
 
-
-    function earningPertokenPerDay() public view returns (uint256){ 
-        return  stakingRewards.mul(multiplier).div(366).div(100);
+    /**
+     * @dev Function to calculate earnings per token per day 
+     */
+    function earningPerTokenPerDay() public view returns (uint256){ 
+        return  stakingRewards.mul(multiplier).div(366).div(10000);
     }
 
     /**
@@ -129,18 +132,23 @@ contract Staking is Ownable {
     function updateMinStakeAmount(uint256 amount) public onlyOwner() {
 
         require(amount > 0, "Staking:updateMinStakeAmount = Min Staking Amount  can't be 0");
-
         minAmount = amount;
 
     }
 
+    /**
+     * @dev Function to set deposit contract address
+     * @param _depositContract address of contract to which tokens will be deposited
+     */
     function setDepositContract(address _depositContract) public onlyOwner() {
 
         require(_depositContract != address(0), "Staking:setDepositContract - contract address can't be 0");
         depositContract = _depositContract;
 
-    }
-
+    }/**
+     * @dev Function to update end date of staking in case it need to be changed
+     * @param _stakingDateEnd - news staking date. 
+     */
     function updateEndDate(uint256 _stakingDateEnd) public onlyOwner() {
 
         require(_stakingDateEnd > block.timestamp, "Staking:updateEndDate - End date can't be less than current block timestamp");
@@ -149,7 +157,7 @@ contract Staking is Ownable {
     }
 
     /**
-     * @dev Function to accept contribution to staking
+     * @dev Function to accept contribution for staking
      * @param amount number of AUDT tokens sent to contract for staking     
      */
 
@@ -206,7 +214,7 @@ contract Staking is Ownable {
      */
     function _deliverRewards(uint256 amountRedeemed) internal  {
 
-        uint256 amountEarned = returnEarningsPerUser(msg.sender).div(multiplier);
+        uint256 amountEarned = returnEarningsPerUser(msg.sender);
         _auditToken.mint(address(this), amountEarned);
         uint256 amountToTransfer = amountRedeemed.add(amountEarned);
         totalReleased = totalReleased.add(amountRedeemed);
