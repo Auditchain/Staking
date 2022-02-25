@@ -13,8 +13,6 @@ import "./MemberHelpers.sol";
  * @title Staking 
  * @dev To facilitate staking of AUDT tokens.
  * Participants can stake their AUDT tokens until platform goes live.
- * Contract will issue one staking token for each AUDT Token staked
- * Contract will burn all redeemed staking tokens upon redemption
  * Contract will eliminate staking rewards for redemptions made during the staking period
  */
 contract Staking is Ownable {
