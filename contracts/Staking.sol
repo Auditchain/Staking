@@ -187,7 +187,6 @@ contract Staking is Ownable {
         IERC20(_auditToken).safeTransferFrom(msg.sender, address(this), amount);
     }
 
-
      /**
      * @dev Function to redeem contribution. . 
      * User can claim staking total staking amount.
@@ -207,7 +206,6 @@ contract Staking is Ownable {
             _returnDeposit(amountRedeemed);
 
     }
-
 
      /**
      * @dev Function to deliver rewards with original deposit called from redeem() function
