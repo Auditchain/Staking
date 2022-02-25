@@ -84,6 +84,8 @@ contract Staking is Ownable {
         require(blacklisted != address(0), "Staking:blacklistAddresses - Blacklisted address can't be 0");
         TokenHolder storage tokenHolder = tokenHolders[blacklisted];
         tokenHolder.blacklisted = true;
+
+        emit LogBlacklisted(blacklisted);
     }
 
 
@@ -98,7 +100,7 @@ contract Staking is Ownable {
         require(amount > 0, "Staking:returnUnauthorizedTokens - Amount of tokens can't be 0");
 
         IERC20(_auditToken).safeTransfer(recipient, amount);
-        LogUnauthorizedTokensReturn(recipient, amount);
+        emit LogUnauthorizedTokensReturn(recipient, amount);
     }
 
 
@@ -151,7 +153,7 @@ contract Staking is Ownable {
 
         require(_stakingDateEnd > block.timestamp, "Staking:updateEndDate - End date can't be less than current block timestamp");
         stakingDateEnd = _stakingDateEnd;
-        LogUpdateEndDate(_stakingDateEnd);
+        emit LogUpdateEndDate(_stakingDateEnd);
     }
 
     /**
@@ -219,7 +221,7 @@ contract Staking is Ownable {
         IERC20(_auditToken).approve(depositContract, amountToTransfer);
         IERC20(_auditToken).safeTransfer(depositContract, amountToTransfer);
         MemberHelpers(depositContract).increaseDeposit(msg.sender, amountToTransfer);
-        LogRewardDelivered(msg.sender, amountRedeemed, amountEarned);
+        emit LogRewardDelivered(msg.sender, amountRedeemed, amountEarned);
     }
 
      /**
@@ -230,6 +232,6 @@ contract Staking is Ownable {
         stakedAmount = stakedAmount.sub(amount);
         totalCancelled = totalCancelled.add(amount);
         IERC20(_auditToken).safeTransfer(msg.sender, amount);
-        LogDepositCancelled(msg.sender, amount);
+        emit LogDepositCancelled(msg.sender, amount);
     }
 }
