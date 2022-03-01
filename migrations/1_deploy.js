@@ -29,7 +29,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
 
     console.log("\n\n" + '"AUDT_TOKEN_ADDRESS":"' + token.address + '",');
     console.log('"STAKING_CONTRACT_ADDRESS":"' + staking.address + '",');
-    console.log('"MEMBER_STAKING_ADRESS":"' + memberHelpers.address + '"');
+    console.log('"MEMBER_STAKING_ADDRESS":"' + memberHelpers.address + '"');
 
 
 }
