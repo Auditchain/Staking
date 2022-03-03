@@ -57,11 +57,6 @@ contract Staking is Ownable {
     ///@dev Emitted when address is entered into blacklist
     event LogBlacklisted(address indexed to);
 
-    ///@dev Emitted when unauthorized tokens are refunded
-    event LogUnauthorizedTokensReturn(address indexed to, uint256 amount);
-
-    event LogUpdateEndDate(uint256 endDate);
-
 
     /**
      * @dev Sets the below variables 
@@ -87,22 +82,6 @@ contract Staking is Ownable {
 
         emit LogBlacklisted(blacklisted);
     }
-
-
-    /**
-     * @dev Function to manually return tokens which were send directly to the contract
-     * @param recipient - address of recipient
-     * @param amount - amount refunded   
-     */
-    function returnUnauthorizedTokens( address recipient, uint256 amount) public onlyOwner() {
-
-        require(recipient != address(0), "Staking:returnUnauthorizedTokens - Recipient address can't be 0");
-        require(amount > 0, "Staking:returnUnauthorizedTokens - Amount of tokens can't be 0");
-
-        IERC20(_auditToken).safeTransfer(recipient, amount);
-        emit LogUnauthorizedTokensReturn(recipient, amount);
-    }
-
 
      /**
      * @dev Function to return earning ratio per given amount
@@ -144,17 +123,8 @@ contract Staking is Ownable {
 
         require(_depositContract != address(0), "Staking:setDepositContract - contract address can't be 0");
         depositContract = _depositContract;
-
-    }/**
-     * @dev Function to update end date of staking in case it need to be changed
-     * @param _stakingDateEnd - news staking date. 
-     */
-    function updateEndDate(uint256 _stakingDateEnd) public onlyOwner() {
-
-        require(_stakingDateEnd > block.timestamp, "Staking:updateEndDate - End date can't be less than current block timestamp");
-        stakingDateEnd = _stakingDateEnd;
-        emit LogUpdateEndDate(_stakingDateEnd);
     }
+    
 
     /**
      * @dev Function to accept contribution for staking
@@ -216,7 +186,6 @@ contract Staking is Ownable {
         _auditToken.mint(address(this), amountEarned);
         uint256 amountToTransfer = amountRedeemed.add(amountEarned);
         totalReleased = totalReleased.add(amountRedeemed);
-        IERC20(_auditToken).approve(depositContract, amountToTransfer);
         IERC20(_auditToken).safeTransfer(depositContract, amountToTransfer);
         MemberHelpers(depositContract).increaseDeposit(msg.sender, amountToTransfer);
         emit LogRewardDelivered(msg.sender, amountRedeemed, amountEarned);
