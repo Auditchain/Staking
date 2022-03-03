@@ -229,63 +229,6 @@ contract("Staking Token", (accounts) => {
 
     });
 
-    describe("update staking end date", async () => {
-
-        it("It should update end date by the owner", async () => {
-
-            let blockNumber = await web3.eth.getBlockNumber();
-            let blockTime = await web3.eth.getBlock(blockNumber);
-            let endDateSet = blockTime.timestamp + 3000;
-
-            await token.mint(holder1, tokensToDeposit, { from: owner });
-            await staking.updateEndDate(endDateSet, { from: owner });
-            let endDate = await staking.stakingDateEnd();
-            assert.strictEqual(endDate.toString(), endDateSet.toString());
-        })
-
-        it("It should fail updating end date by holder1", async () => {
-
-            let blockNumber = await web3.eth.getBlockNumber();
-            let blockTime = await web3.eth.getBlock(blockNumber);
-
-            let endDateSet = blockTime.timestamp + 3000;
-
-            try {
-                await await staking.updateEndDate(endDateSet, { from: holder1 });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        })
-
-        it("It should fail updating staking period by passing argument 0", async () => {
-
-            try {
-                await staking.updateEndDate(0, { from: owner })
-                expectRevert();
-
-            } catch (error) {
-                ensureException(error);
-            }
-        })
-
-        it("It should fail updating end date by passing end date less or equal current block timestamp", async () => {
-
-
-            let blockNumber = await web3.eth.getBlockNumber();
-            let blockTime = await web3.eth.getBlock(blockNumber);
-            let endDate = blockTime.timestamp - 1;
-
-            try {
-                await staking.updateEndDate(endDate, { from: owner });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        })
-
-
-    })
 
     describe("Update min stake amount", async () => {
 
@@ -319,53 +262,6 @@ contract("Staking Token", (accounts) => {
 
         })
 
-
-    })
-
-    describe("returnUnauthorizedTokens", async () => {
-
-        it("It should fail to refund tokens to holder1 due to insufficient funds in the contract", async () => {
-
-            await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
-            await staking.stake(tokensToDeposit, { from: holder1 });
-
-            try {
-                let result = await staking.returnUnauthorizedTokens(holder1, doubleTokensToDeposit, { from: owner });
-                expectRevert();
-            }
-            catch (error) {
-                ensureException(error);
-            }
-        })
-
-        it("It should refund tokens to holder1", async () => {
-
-
-            await token.transfer(staking.address, tokensToDeposit, { from: holder1 });
-            let result = await staking.returnUnauthorizedTokens(holder1, tokensToDeposit, { from: owner });
-            let balanceAfterRefund = await token.balanceOf(holder1)
-            assert.strictEqual(balanceAfterRefund.toString(), tokensToDeposit.toString());
-            assert.lengthOf(result.logs, 1);
-
-            let event = result.logs[0];
-            assert.equal(event.event, 'LogUnauthorizedTokensReturn');
-            assert.strictEqual(event.args.amount.toString(), tokensToDeposit.toString());
-
-        })
-
-        it("It should fail to refund tokens to holder1 when refund is called by not authorized user", async () => {
-
-
-            await token.transfer(staking.address, tokensToDeposit, { from: holder1 })
-
-            try {
-                let result = await staking.returnUnauthorizedTokens(holder1, tokensToDeposit, { from: holder1 });
-                expectRevert();
-            }
-            catch (error) {
-                ensureException(error);
-            }
-        })
 
     })
 
