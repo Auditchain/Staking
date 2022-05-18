@@ -26,7 +26,7 @@ contract Staking is Ownable {
         uint256 dateStaked;         // date stake was set
         bool blacklisted;           // true if blacklisted
         bool released;              // true if stake released
-        bool cancelled;             // true if canclled before the term was over
+        bool cancelled;             // true if canceled before the term was over
     }
 
     mapping(address => TokenHolder) public tokenHolders; //tokenHolder list
@@ -39,10 +39,10 @@ contract Staking is Ownable {
     uint256 public stakingDateEnd;  //Staking date end
     address public depositContract; //contract where tokens will be transferred after staking
 
-    uint256 multiplier = 1e18;      // number to calculate accured gains with precisiono of 18 decimal points                
+    uint256 multiplier = 1e18;      // number to calculate accrued gains with precision of 18 decimal points                
     
-    uint256 public stakingRewards  = 500;   // added 2 zeros to accomplish fractional interstes like e.g. 5.55 would be represented as 555
-    uint256 public minAmount  = 1000e18;    // minum amount which can be staked
+    uint256 public stakingRewards  = 1200;   // added 2 zeros to accomplish fractional interests like e.g. 5.55 would be represented as 555
+    uint256 public minAmount  = 500e18;    // minium amount which can be staked
 
     
     ///@dev Emitted when staking token is issued
