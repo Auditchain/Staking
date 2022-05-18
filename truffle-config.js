@@ -4,7 +4,7 @@ var dotenv = require("dotenv");
 dotenv.config();
 
 
-const HDWalletProvider = require("truffle-hdwallet-provider");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
 const MNEMONIC = process.env.MNEMONIC
 const INFURA_KEY = process.env.INFURA_KEY
 
@@ -20,14 +20,16 @@ if (!MNEMONIC || !INFURA_KEY) {
 module.exports = {
   networks: {
     development: {
-      host: "localhost",
+      host: "127.0.0.1",
       port: 8545,
-      gas: 5e6,
+      gas: 0x6691b7,
       gasPrice: 0x01,
       network_id: "*", // Match any network id
       accounts: 10,
       defaultEtherBalance: 1000,
-      blockTime: 3
+      blockTime: 3,
+      maxFeePerGas: 885000000,
+      baseFeePerGas:875000000
     },
     rinkeby: {
       provider: function () {
@@ -37,7 +39,7 @@ module.exports = {
         );
       },
       network_id: "*",
-      gas: 4000000
+      gas: 0x989680
     },
     ropsten: {
       provider: function () {
@@ -50,17 +52,49 @@ module.exports = {
       gas: 4500000,
       gasPrice: 1000000000
     },
-    rinkeby: {
+    kovan: {
       provider: function () {
         return new HDWalletProvider(
           MNEMONIC,
-          "https://rinkeby.infura.io/v3/" + INFURA_KEY
+          "https://kovan.infura.io/v3/" + INFURA_KEY
         );
       },
       network_id: "*",
-      gas: 4000000
+      gas: 0x989680
+    },
+    goerli: {
+      provider: function () {
+        return new HDWalletProvider(
+          MNEMONIC,
+          "https://goerli.infura.io/v3/" + INFURA_KEY
+          // "wss://goerli.infura.io/ws/v3/2645f5383f544588975db84a58cd9af6"
+          
+        );
+      },
+      network_id: "*",
+      gas: 0x989680,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      websocket: true,
+      timeoutBlocks: 50000,
+      networkCheckTimeout: 1000000,
+      skipDryRun: true
 
+    },
+    matic: {
+      provider: () => new HDWalletProvider(MNEMONIC, 'https://matic-mumbai.chainstacklabs.com'),
+      // provider: () => new HDWalletProvider(MNEMONIC, 'https://polygon-mumbai.g.alchemy.com/v2/H2g1siLIwqCBQMIY052r_vJAejQ_A_V3'),
 
+      network_id: 80001,
+      confirmations: 1,
+      timeoutBlocks: 1800,
+      skipDryRun: true,
+      chainId: 80001,
+      timeoutBlocks: 50000,
+      networkCheckTimeout: 1000000,
+      skipDryRun: true,
+      blockTime: 3,
     },
     coverage: {
       host: 'localhost',
@@ -93,6 +127,12 @@ module.exports = {
       version: '0.8.0',
     },
   },
+  settings: {
+    optimizer: {
+      enabled: false,
+      runs: 200
+    },
+ },
 
 };
 
