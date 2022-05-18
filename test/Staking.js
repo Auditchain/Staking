@@ -123,11 +123,11 @@ contract("Staking Token", (accounts) => {
 
 
 
-        it("It should fail transferring less than 1000 AUDT tokens", async () => {
+        it("It should fail transferring less than 500 AUDT tokens", async () => {
 
             await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
             try {
-                await staking.stake(new BigNumber(999).mult(1e18), { from: holder1 });
+                await staking.stake(new BigNumber(499).mult(1e18), { from: holder1 });
                 expectRevert();
 
             } catch (error) {
