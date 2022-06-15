@@ -24,7 +24,7 @@ abstract contract Context {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -96,7 +96,7 @@ abstract contract Ownable is Context {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -323,7 +323,7 @@ library SafeMath {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -405,7 +405,7 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -616,7 +616,7 @@ library Address {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -715,7 +715,7 @@ library SafeERC20 {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -743,7 +743,7 @@ interface IERC20Metadata is IERC20 {
     function decimals() external view returns (uint8);
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1098,7 +1098,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     ) internal virtual {}
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1141,7 +1141,7 @@ abstract contract ERC20Burnable is Context, ERC20 {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1208,7 +1208,7 @@ library Strings {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1233,7 +1233,7 @@ interface IERC165 {
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1262,7 +1262,7 @@ abstract contract ERC165 is IERC165 {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1513,7 +1513,7 @@ abstract contract AccessControl is Context, IAccessControl, ERC165 {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -1599,7 +1599,7 @@ contract Locked is AccessControl {
 
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 pragma experimental ABIEncoderV2;
@@ -1833,7 +1833,7 @@ contract AuditToken is Locked, ERC20, ERC20Burnable{
 
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -2128,7 +2128,7 @@ library EnumerableSet {
     }
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -2216,6 +2216,81 @@ abstract contract AccessControlEnumerable is IAccessControlEnumerable, AccessCon
     }
 }
 
+// SPDX-License-Identifier: MIT
+
+
+
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ *
+ * Note that because there is a single `nonReentrant` guard, functions marked as
+ * `nonReentrant` may not call one another. This can be worked around by making
+ * those functions `private`, and then adding `external` `nonReentrant` entry
+ * points to them.
+ *
+ * TIP: If you would like to learn more about reentrancy and alternative ways
+ * to protect against it, check out our blog post
+ * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ */
+abstract contract ReentrancyGuard {
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and make it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+}
+
+// SPDX-License-Identifier: MIT
+
+
+    
+interface IAuditToken {
+    function mint(address to, uint256 amount) external returns (bool) ;
+    function transferFrom(address from, address to, uint256 value) external  returns (bool);
+    function transfer(address to, uint256 value) external returns (bool);
+}
+
+// SPDX-License-Identifier: MIT
+
 
 
 
@@ -2223,26 +2298,25 @@ abstract contract AccessControlEnumerable is IAccessControlEnumerable, AccessCon
 
 /**
  * @title MemberHelpers
- * Additional function for Members
  */
-contract MemberHelpers is AccessControlEnumerable {
-    using SafeMath for uint256;
+contract MemberHelpers is AccessControlEnumerable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
 
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
- 
+    address public auditToken; //AUDT tokenIERC20Upgradeable
     mapping(address => uint256) public deposits; //track deposits per user
-    uint256 public totalStaked;
-    
 
+    event LogDepositRedeemed(address indexed from, uint256 amount);
     event LogIncreaseDeposit(address user, uint256 amount);
+    event LogDecreaseDeposit(address user, uint256 amount);
 
-    constructor() {
-
+    constructor(address _auditToken) {
+        require(_auditToken != address(0), "MemberHelpers:setCohort - Cohort address can't be 0");
+        auditToken = _auditToken;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
     }
-   
+
    /// @dev check if caller is a controller
     modifier isController(string memory source) {
         string memory msgError = string(abi.encodePacked("MemberHelpers(isController - Modifier):", source, "- Caller is not a controller"));
@@ -2250,22 +2324,41 @@ contract MemberHelpers is AccessControlEnumerable {
 
         _;
     }
-   
-
-    function increaseDeposit(address user, uint256 amount) public isController("increaseDeposit") {
-        deposits[user] = deposits[user].add(amount);
-        emit LogIncreaseDeposit(user, amount);
-    }
 
 
-    function returnDepositAmount(address user) public view returns (uint256) {
+    function returnDepositAmount(address user) external view returns (uint256) {
         return deposits[user];
     }
 
 
+    function increaseDeposit(address user, uint256 amount) external isController("increaseDeposit") returns(bool){
+        deposits[user] += amount;
+        emit LogIncreaseDeposit(user, amount);
+        return true;
+    }
+
+    function decreaseDeposit(address user, uint256 amount) external isController("decreaseDeposit") returns (bool){
+        deposits[user] -= amount;
+        emit LogDecreaseDeposit(user, amount);
+        return true;
+    }
+
+    /**
+     * @dev Function to redeem contribution.
+     */
+    function redeem() external nonReentrant {
+
+        // deposits[msg.sender] -= amount;
+        uint256 amount = deposits[msg.sender];
+        deposits[msg.sender] = 0;
+        require(amount > 0, "MemberHelpers:redeem - Nothing to redeem. ");
+        IERC20(auditToken).safeTransfer(msg.sender, amount);
+        emit LogDepositRedeemed(msg.sender, amount);
+    }
+    
 }
 
-
+// SPDX-License-Identifier: MIT
 
 
 
@@ -2293,7 +2386,7 @@ contract Staking is Ownable {
         uint256 dateStaked;         // date stake was set
         bool blacklisted;           // true if blacklisted
         bool released;              // true if stake released
-        bool cancelled;             // true if canclled before the term was over
+        bool cancelled;             // true if canceled before the term was over
     }
 
     mapping(address => TokenHolder) public tokenHolders; //tokenHolder list
@@ -2306,10 +2399,10 @@ contract Staking is Ownable {
     uint256 public stakingDateEnd;  //Staking date end
     address public depositContract; //contract where tokens will be transferred after staking
 
-    uint256 multiplier = 1e18;      // number to calculate accured gains with precisiono of 18 decimal points                
+    uint256 multiplier = 1e18;      // number to calculate accrued gains with precision of 18 decimal points                
     
-    uint256 public stakingRewards  = 1200;   // added 2 zeros to accomplish fractional interstes like e.g. 5.55 would be represented as 555
-    uint256 public minAmount  = 500e18;    // minum amount which can be staked
+    uint256 public stakingRewards  = 1200;   // added 2 zeros to accomplish fractional interests like e.g. 5.55 would be represented as 555
+    uint256 public minAmount  = 500e18;    // minium amount which can be staked
 
     
     ///@dev Emitted when staking token is issued
