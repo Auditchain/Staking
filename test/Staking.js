@@ -1,12 +1,8 @@
 const util = require('util')
 
-const STAKINGTOKEN = artifacts.require('../StakingToken');
 const TOKEN = artifacts.require('../AuditToken');
 const STAKING = artifacts.require('../Staking.sol');
 const MEMBERHELPERS = artifacts.require('../MemberHelpers.sol')
-// var Tx = require('ethereumjs-tx');
-
-
 
 
 import {
@@ -18,10 +14,6 @@ import expectRevert from './helpers/expectRevert';
 const timeMachine = require('ganache-time-traveler');
 
 
-
-
-
-
 //import should from 'should';
 
 var BigNumber = require('big-number');
@@ -30,11 +22,12 @@ contract("Staking Token", (accounts) => {
     let owner;
     let holder1;
     let holder2;
+    let holder3;
 
     let tokensToDeposit = new BigNumber(1000).mult(1e18);
-    let doubleTokensToDeposit = new BigNumber(2000).mult(1e18);
+    let tokensToRecover = new BigNumber(10000).mult(1e18);
+
     let token;
-    let depositContract;
     let staking;
     let memberHelpers;
     let MINTER_ROLE = web3.utils.keccak256("MINTER_ROLE");
@@ -46,29 +39,34 @@ contract("Staking Token", (accounts) => {
         owner = accounts[0];
         holder1 = accounts[1];
         holder2 = accounts[2];
-        depositContract = accounts[5];
+        holder3 = accounts[3];
+
+        
     });
 
     beforeEach(async () => {
 
-        let blockNumber = await web3.eth.getBlockNumber();
+        let blockNumber =await web3.eth.getBlockNumber();
 
         token = await TOKEN.new(owner);
         let blockTime = await web3.eth.getBlock(blockNumber);
 
-        let endDate = blockTime.timestamp + 2000;
+        let endDate = Number(blockTime.timestamp) + 200;
 
         staking = await STAKING.new(token.address, endDate);
-        memberHelpers = await MEMBERHELPERS.new();
+        memberHelpers = await MEMBERHELPERS.new(token.address);
         await token.grantRole(MINTER_ROLE, owner, { from: owner });
         await token.grantRole(MINTER_ROLE, staking.address, { from: owner });
         await token.mint(holder1, tokensToDeposit, { from: owner });
+        await token.mint(holder2, tokensToDeposit, { from: owner });
+
+
+        await staking.setDepositContract(memberHelpers.address);
+        await memberHelpers.grantRole(CONTROLLER_ROLE, staking.address, { from: owner });
 
     })
 
     describe("Deploy", async () => {
-
-
 
         it("Should succeed. Initiate reward within allowed boundaries", async () => {
 
@@ -110,6 +108,9 @@ contract("Staking Token", (accounts) => {
 
         it("It should fail contribution of AUDT tokens from holder1 for staking due to deposit period expired", async () => {
 
+            let snapshot = await timeMachine.takeSnapshot();
+            snapshotId = snapshot['result'];
+
             await timeMachine.advanceTime(60 * 60 * 24);  // a month
             await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
             try {
@@ -119,6 +120,8 @@ contract("Staking Token", (accounts) => {
 
                 ensureException(error);
             }
+
+            await timeMachine.revertToSnapshot(snapshotId);
         })
 
 
@@ -136,22 +139,20 @@ contract("Staking Token", (accounts) => {
         })
 
 
-        it("It should fail accepting deposit from blacklisted address", async () => {
+        // it("It should fail accepting deposit from blacklisted address", async () => {
 
-            await token.mint(holder1, tokensToDeposit, { from: owner });
-            await staking.blacklistAddresses(holder1, { from: owner });
-            await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
+        //     await token.mint(holder1, tokensToDeposit, { from: owner });
+        //     await staking.blacklistAddresses(holder1, { from: owner });
+        //     await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
 
-            try {
-                await staking.stake(tokensToDeposit, { from: holder1 });
-                expectRevert();
+        //     try {
+        //         await staking.stake(tokensToDeposit, { from: holder1 });
+        //         expectRevert();
 
-            } catch (error) {
-                ensureException(error);
-            }
-
-
-        })
+        //     } catch (error) {
+        //         ensureException(error);
+        //     }
+        // })
 
 
         it("It should fail accepting deposit twice", async () => {
@@ -176,6 +177,7 @@ contract("Staking Token", (accounts) => {
 
     describe("Redeem", async () => {
 
+
         beforeEach(async () => {
             let snapshot = await timeMachine.takeSnapshot();
             snapshotId = snapshot['result'];
@@ -190,15 +192,14 @@ contract("Staking Token", (accounts) => {
 
             await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder1 });
             await staking.stake(tokensToDeposit, { from: holder1 });
-            await timeMachine.advanceTimeAndBlock(60 * 60 * 24 * 366);  // year
-            await staking.setDepositContract(memberHelpers.address);
-            await memberHelpers.grantRole(CONTROLLER_ROLE, staking.address, { from: owner });
+            await timeMachine.advanceTime(60 * 60 * 24 * 366);  // year
+            await timeMachine.advanceBlock();
+
             await staking.redeem({ from: holder1 });
 
             let balanceAfterStaking = await token.balanceOf(memberHelpers.address);
             let depositValue = await memberHelpers.returnDepositAmount(holder1);
 
-            let earningsPerUser = await staking.earningPerTokenPerDay();
             assert.strictEqual(balanceAfterStaking.toString(), depositValue.toString());
 
         })
@@ -226,6 +227,43 @@ contract("Staking Token", (accounts) => {
 
             assert.strictEqual(balanceAfterStaking.toNumber(), 0);
         })
+
+        it("It should send tokens to user wallet when redeeming after staking is over.", async () => {
+
+            await token.increaseAllowance(staking.address, tokensToDeposit, { from: holder2 });
+            await staking.stake(tokensToDeposit, { from: holder2 });
+
+            let blockNumber = await web3.eth.getBlockNumber();
+            let blockTime = await web3.eth.getBlock(blockNumber);
+
+            await timeMachine.advanceTime(60 * 60 * 24 * 366);
+            await timeMachine.advanceBlock();
+
+            blockNumber = await web3.eth.getBlockNumber();
+
+
+            await staking.redeem({ from: holder2 });
+            let result = await memberHelpers.redeem({ from: holder2 });
+
+            assert.lengthOf(result.logs, 1);
+
+            let event = result.logs[0];
+            assert.equal(event.event, 'LogDepositRedeemed');
+            assert.strictEqual(event.args.from, holder2);
+
+        })
+
+
+        it("It should fail redeeming from member helpers when nothing is there.", async () => {
+
+            try {
+                await memberHelpers.redeem({ from: holder2 });
+                expectRevert();
+            } catch (error) {
+                ensureException(error);
+            }
+        });
+
 
     });
 
@@ -276,6 +314,55 @@ contract("Staking Token", (accounts) => {
 
             try {
                 await staking.stake(tokensToDeposit, { from: holder1 });
+                expectRevert();
+
+            } catch (error) {
+                ensureException(error);
+            }
+
+
+        })
+    })
+
+
+    describe("Recover Tokens", async () => {
+
+        it("It should succeed receiving tokens by the controller", async () => {
+
+            await token.mint(memberHelpers.address, tokensToDeposit, { from: owner });
+            await memberHelpers.grantRole(CONTROLLER_ROLE, holder3, { from: owner });
+            await memberHelpers.receiveTokens(tokensToDeposit, { from: holder3 });
+
+            let balance = await token.balanceOf(holder3);
+            assert.equal(balance.toString(), tokensToDeposit.toString());
+        })
+
+
+        it("It should succeed fail receiving tokens by not an authorized user.", async () => {
+
+            await token.mint(memberHelpers.address, tokensToDeposit, { from: owner });
+
+
+
+            try {
+                await memberHelpers.receiveTokens(tokensToDeposit, { from: owner });
+                expectRevert();
+
+            } catch (error) {
+                ensureException(error);
+            }
+
+
+        })
+
+        it("It should succeed fail receiving more tokens than available in contract.", async () => {
+
+            await token.mint(memberHelpers.address, tokensToDeposit, { from: owner });
+            await memberHelpers.grantRole(CONTROLLER_ROLE, owner, { from: owner });
+
+
+            try {
+                await memberHelpers.receiveTokens(tokensToRecover, { from: owner });
                 expectRevert();
 
             } catch (error) {
