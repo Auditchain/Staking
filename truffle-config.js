@@ -22,8 +22,8 @@ module.exports = {
     development: {
       host: "127.0.0.1",
       port: 8545,
-      gas: 0x6691b7,
-      gasPrice: 0x01,
+      gas: 10000000,
+      gasPrice: 1000000000,
       network_id: "*", // Match any network id
       accounts: 10,
       defaultEtherBalance: 1000,
